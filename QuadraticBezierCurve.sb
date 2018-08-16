@@ -1,0 +1,157 @@
+Setup()
+MainLoop()
+Program.End()
+
+Sub Setup
+  ' Set up GraphicsWindow
+  GraphicsWindow.Hide()
+  GraphicsWindow.Width = 800
+  GraphicsWindow.Height = 600
+  GraphicsWindow.Title = "Small Basic: Quadratic Bezier Curve"
+  GraphicsWindow.Show()
+  
+  'Declare & Define global variables
+  p0[0] = 5   'x
+  p0[1] = 300 'y
+  
+  p1[0] = 400 'x
+  p1[1] = 15  'y
+  
+  p2[0] = 780 'x 
+  p2[1] = 300 'y
+  dragging = "False"
+  bDraw = "True"
+  dragee = 0
+  
+  HelpButton = Controls.AddButton("Help/Info", 0, 0)
+  ResetButton = Controls.AddButton("Reset", 75, 0)
+  PauseButton = Controls.AddButton("Pause (stops flickering while paused)", 124, 0)
+  
+  GraphicsWindow.MouseDown = onMouseDown
+  GraphicsWindow.MouseUp = onMouseUp
+  Controls.ButtonClicked = onButtonClicked
+EndSub
+
+Sub onMouseDown
+  If Mouse.IsLeftButtonDown = "True" Then
+    If GraphicsWindow.MouseX > (p0[0] - 15) And GraphicsWindow.MouseX < (p0[0] + 15) Then
+      If GraphicsWindow.MouseY > (p0[1] - 15) And GraphicsWindow.MouseY < (p0[1] + 15) Then
+        dragee = 0
+        dragging = "True"
+      EndIf
+    ElseIf GraphicsWindow.MouseX > (p1[0] - 15) And GraphicsWindow.MouseX < (p1[0] + 15) Then
+      If GraphicsWindow.MouseY > (p1[1] - 15) And GraphicsWindow.MouseY < (p1[1] + 15) Then
+        dragee = 1
+        dragging = "True"
+      EndIf
+    ElseIf GraphicsWindow.MouseX > (p2[0] - 15) And GraphicsWindow.MouseX < (p2[0] + 15) Then
+      If GraphicsWindow.MouseY > (p2[1] - 15) And GraphicsWindow.MouseY < (p2[1] + 15) Then
+        dragee = 2
+        dragging = "True"
+      EndIf
+    EndIf
+  EndIf
+EndSub
+
+Sub onMouseUp
+  If dragging = "True" Then
+    dragging = "False"
+  EndIf
+EndSub
+
+Sub Update
+  If dragging = "True" Then
+    If dragee = 0 Then
+      p0[0] = GraphicsWindow.MouseX
+      p0[1] = GraphicsWindow.MouseY
+    ElseIf dragee = 1 then
+      p1[0] = GraphicsWindow.MouseX
+      p1[1] = GraphicsWindow.MouseY
+    ElseIf dragee = 2 then
+      p2[0] = GraphicsWindow.MouseX
+      p2[1] = GraphicsWindow.MouseY
+    EndIf
+  EndIf
+EndSub
+
+Sub ClearCanvas
+  'Ghetto method: (Works faster and better than GraphicsWindow.Clear() for some reason...)
+  GraphicsWindow.BrushColor = GraphicsWindow.BackgroundColor
+  GraphicsWindow.FillRectangle(0, 0, GraphicsWindow.Width, GraphicsWindow.Height)
+EndSub
+
+Sub DrawBezierCurve
+  x_prev = p0[0]
+  y_prev = p0[1]
+  For i = 0 To 20
+    t = i / 20
+    
+    oneMinusT = (1-t)
+    x = p0[0] * Math.Power(oneMinusT, 2) + 2 * oneMinusT * t * p1[0] + p2[0] * Math.Power(t, 2)
+    y = p0[1] * Math.Power(oneMinusT, 2) + 2 * oneMinusT * t * p1[1] + p2[1] * Math.Power(t, 2)
+    GraphicsWindow.DrawLine(x_prev, y_prev, x, y)
+    GraphicsWindow.DrawEllipse(x-1, y-1, 2, 2)
+    x_prev = x
+    y_prev = y
+  EndFor
+EndSub
+
+Sub Draw
+  ClearCanvas()
+  GraphicsWindow.BrushColor = "#000000"
+  GraphicsWindow.PenColor = "#DDDDDD"
+  GraphicsWindow.PenWidth = 1
+  GraphicsWindow.DrawLine(p0[0], p0[1], p1[0], p1[1])
+  GraphicsWindow.DrawLine(p1[0], p1[1], p2[0], p2[1])
+  GraphicsWindow.FillEllipse(p0[0]-2.5, p0[1]-2.5, 5, 5)
+  GraphicsWindow.FillEllipse(p1[0]-2.5, p1[1]-2.5, 5, 5)
+  GraphicsWindow.FillEllipse(p2[0]-2.5, p2[1]-2.5, 5, 5)
+  GraphicsWindow.DrawText(p0[0], p0[1], "p0")
+  GraphicsWindow.DrawText(p1[0], p1[1], "p1")
+  GraphicsWindow.DrawText(p2[0], p2[1], "p2")
+  
+  GraphicsWindow.PenColor = "#FF0000"
+  DrawBezierCurve()
+EndSub
+
+Sub onButtonClicked
+  If Controls.LastClickedButton = ResetButton Then
+    p0[0] = 5
+    p0[1] = 300
+    
+    p1[0] = 400
+    p1[1] = 15
+    
+    p2[0] = 780
+    p2[1] = 300
+    dragging = "False"
+    dragee = 0
+  ElseIf Controls.LastClickedButton = HelpButton then
+    TextWindow.Show()
+    TextWindow.Title = "Help / Info"
+    TextWindow.WriteLine("To manipulate the curve, drag any of the black dots (p0, p1, p2, etc.) around your screen.")
+    TextWindow.WriteLine("Also, please excuse the graphical flickering as well as the somewhat high CPU usage, this is caused by Small Basic not being very optimized and because Small Basic doesn't support double buffer graphics (like DirectX and OpenGL).")
+    TextWindow.Pause()
+    TextWindow.Clear()
+    TextWindow.Hide()
+  ElseIf Controls.LastClickedButton = PauseButton then
+    If bDraw = "True" then
+      bDraw = "False"
+      Controls.SetButtonCaption(PauseButton, "Unpause")
+    else
+      bDraw = "True"
+      Controls.SetButtonCaption(PauseButton, "Pause")
+    EndIf
+  EndIf
+EndSub
+
+' Main loop
+Sub MainLoop
+  While "True"
+    Program.Delay(25)
+    If bDraw = "True" Then
+      Update()
+      Draw()
+    EndIf
+  EndWhile
+EndSub
